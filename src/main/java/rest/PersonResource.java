@@ -1,18 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package rest;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import dtos.PersonDTO;
 import dtos.PersonsDTO;
-import entities.Person;
-import facades.FacadeExample;
 import facades.PersonFacade;
-import java.util.List;
 import javax.persistence.EntityManagerFactory;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -52,7 +44,7 @@ public class PersonResource {
         return GSON.toJson(personsDTO);
     }
 
-    @Path("id/{id}")
+    @Path("{id}")
     @GET
     @Produces({MediaType.APPLICATION_JSON})
     public String getPersonById(@PathParam("id") int id) {
@@ -64,25 +56,23 @@ public class PersonResource {
     @Produces({MediaType.APPLICATION_JSON})
     @Consumes({MediaType.APPLICATION_JSON})
     public Response addPerson(String person) {
-        //System.out.println(person);
         PersonDTO personDTO = GSON.fromJson(person, PersonDTO.class); //manual conversion
         personDTO = PERSONFACADE.addPerson(personDTO);
         return Response.ok(personDTO).build();
     }
 
-    @Path("/{id}")
+    @Path("{id}")
     @PUT
     @Produces({MediaType.APPLICATION_JSON})
     @Consumes({MediaType.APPLICATION_JSON})
     public Response editPerson(@PathParam("id") int id, String person) {
-        //System.out.println(person);
         PersonDTO personDTO = GSON.fromJson(person, PersonDTO.class); //manual conversion
         personDTO.setId(id);
         personDTO = PERSONFACADE.editPerson(personDTO);
         return Response.ok(personDTO).build();
     }
 
-    @Path("/{id}")
+    @Path("{id}")
     @DELETE
     @Produces({MediaType.APPLICATION_JSON})
     public String deleteCar(@PathParam("id") int id) {

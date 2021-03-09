@@ -41,7 +41,7 @@
         </dependency>
         
         <!--CORS-->
-<!--        <dependency>
+        <dependency>
             <groupId>org.glassfish.jersey.containers</groupId>
             <artifactId>jersey-container-servlet</artifactId>
             <version>2.26</version>
@@ -50,7 +50,7 @@
             <groupId>org.glassfish.jersey.inject</groupId>
             <artifactId>jersey-hk2</artifactId>
             <version>2.26</version>
-        </dependency>-->
+        </dependency>
         <!--***-->
         
         <dependency>

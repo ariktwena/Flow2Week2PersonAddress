@@ -60,30 +60,30 @@ public class PersonResource {
         PersonDTO personDTO = PERSONFACADE.getPerson(id);
         return GSON.toJson(personDTO);
     }
-
-    @POST
-    public Response addPerson(String person) {
-        //System.out.println(person);
-        PersonDTO personDTO = GSON.fromJson(person, PersonDTO.class); //manual conversion
-        personDTO = PERSONFACADE.addPerson(personDTO);
-        return Response.ok(personDTO).build();
-    }
-
-    @Path("/{id}")
-    @PUT
-    public Response editPerson(@PathParam("id") int id, String person) {
-        //System.out.println(person);
-        PersonDTO personDTO = GSON.fromJson(person, PersonDTO.class); //manual conversion
-        personDTO.setId(id);
-        personDTO = PERSONFACADE.editPerson(personDTO);
-        return Response.ok(personDTO).build();
-    }
-
-    @Path("/{id}")
-    @DELETE
-    public String deleteCar(@PathParam("id") int id) {
-        PersonDTO personDTO = PERSONFACADE.deletePerson(id);
-        System.out.println(personDTO);
-        return "{\"status\": \"removed\"}";
-    }
+//
+//    @POST
+//    public Response addPerson(String person) {
+//        //System.out.println(person);
+//        PersonDTO personDTO = GSON.fromJson(person, PersonDTO.class); //manual conversion
+//        personDTO = PERSONFACADE.addPerson(personDTO);
+//        return Response.ok(personDTO).build();
+//    }
+//
+//    @Path("/{id}")
+//    @PUT
+//    public Response editPerson(@PathParam("id") int id, String person) {
+//        //System.out.println(person);
+//        PersonDTO personDTO = GSON.fromJson(person, PersonDTO.class); //manual conversion
+//        personDTO.setId(id);
+//        personDTO = PERSONFACADE.editPerson(personDTO);
+//        return Response.ok(personDTO).build();
+//    }
+//
+//    @Path("/{id}")
+//    @DELETE
+//    public String deleteCar(@PathParam("id") int id) {
+//        PersonDTO personDTO = PERSONFACADE.deletePerson(id);
+//        System.out.println(personDTO);
+//        return "{\"status\": \"removed\"}";
+//    }
 }

@@ -18,6 +18,8 @@ import javax.ws.rs.ext.Provider;
  *
  * @author Tweny
  */
+
+
 @Provider
 @PreMatching
 public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilter {
@@ -81,4 +83,4 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
 //   res.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT" );
 //   res.getHeaders().add("Access-Control-Allow-Headers", "Origin, Accept, Content-Type, Authorization,x-access-token");
 // }
-}
+

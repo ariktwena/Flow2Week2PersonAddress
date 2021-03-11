@@ -53,7 +53,7 @@ public class PersonFacade implements IPersonFacade {
     }
 
     @Override
-    public PersonDTO addPerson(PersonDTO personDTO) throws WebApplicationException {
+    public synchronized PersonDTO addPerson(PersonDTO personDTO) throws WebApplicationException {
         EntityManager em = emf.createEntityManager();
         if (personDTO.getName() == null) {
             throw new WebApplicationException("Name is missing", 400);
@@ -61,6 +61,8 @@ public class PersonFacade implements IPersonFacade {
             throw new WebApplicationException("Address has to have a street, zip and city.", 400);
         }
         try {
+            em.getTransaction().begin();
+            
             Person person = new Person(personDTO.getName());
             Address address = new Address(personDTO.getStreet(), personDTO.getZip(), personDTO.getCity());
 
@@ -70,7 +72,7 @@ public class PersonFacade implements IPersonFacade {
                 address.addPerson(person);
 
                 //Persist the address
-                em.getTransaction().begin();
+                
                 em.persist(address);
                 em.getTransaction().commit();
                 return new PersonDTO(person);
@@ -86,7 +88,6 @@ public class PersonFacade implements IPersonFacade {
                 //person.setAddress(address); //(kan også bruges)
 
                 //Persist the address
-                em.getTransaction().begin();
                 em.persist(address);
                 //em.merge(address); //Kan også bruges
                 //em.persist(person); //Kan også bruges
@@ -101,10 +102,12 @@ public class PersonFacade implements IPersonFacade {
     }
 
     @Override
-    public PersonDTO deletePerson(int id) throws WebApplicationException {
+    public synchronized PersonDTO deletePerson(int id) throws WebApplicationException {
         int rowCount;
         EntityManager em = emf.createEntityManager();
         try {
+            em.getTransaction().begin();
+            
             Person person = em.find(Person.class, id);
             System.out.println(person);
             System.out.println(person.getAddress().getId());
@@ -119,12 +122,11 @@ public class PersonFacade implements IPersonFacade {
             PersonDTO personDTO = new PersonDTO(person);
 
             if (findNumberOfAddresses(addressToDelete1) > 1) {
-                em.getTransaction().begin();
+                
                 em.remove(person);
                 em.getTransaction().commit();
                 return personDTO;
             } else {
-                em.getTransaction().begin();
                 em.remove(person);
                 em.remove(addressToDelete1);
                 em.getTransaction().commit();
@@ -141,7 +143,7 @@ public class PersonFacade implements IPersonFacade {
     }
 
     @Override
-    public PersonDTO getPerson(int id) throws WebApplicationException {
+    public synchronized PersonDTO getPerson(int id) throws WebApplicationException {
         EntityManager em = emf.createEntityManager();
         try {
             PersonDTO personDTO = new PersonDTO(em.find(Person.class, id));
@@ -156,7 +158,7 @@ public class PersonFacade implements IPersonFacade {
     }
 
     @Override
-    public List<PersonDTO> getAllPersons() throws WebApplicationException {
+    public synchronized List<PersonDTO> getAllPersons() throws WebApplicationException {
         EntityManager em = emf.createEntityManager();
         try {
             TypedQuery<Person> query = em.createQuery("SELECT person FROM Person person", Person.class);
@@ -170,7 +172,7 @@ public class PersonFacade implements IPersonFacade {
         }
     }
 
-    public PersonsDTO getAllPersonsAsDTO() throws WebApplicationException {
+    public synchronized PersonsDTO getAllPersonsAsDTO() throws WebApplicationException {
         EntityManager em = emf.createEntityManager();
         try {
             TypedQuery<Person> query = em.createQuery("SELECT person FROM Person person", Person.class);
@@ -185,7 +187,7 @@ public class PersonFacade implements IPersonFacade {
     }
 
     @Override
-    public PersonDTO editPerson(PersonDTO personDTO) throws WebApplicationException {
+    public synchronized PersonDTO editPerson(PersonDTO personDTO) throws WebApplicationException {
         //int updateCount;
         if (personDTO.getName() == null) {
             throw new WebApplicationException("Name is missing", 400);
@@ -193,28 +195,30 @@ public class PersonFacade implements IPersonFacade {
             throw new WebApplicationException("Address has to have a street, zip and city.", 400);
         }
         EntityManager em = emf.createEntityManager();
+        
+        //Vi starter transaktion for alle her
+        try {
+            //Begynder tansaktion
+            em.getTransaction().begin();
+            //What to edit
+            Person personOriginal = em.find(Person.class, personDTO.getId());
+            Address addressOriginal = em.find(Address.class, personOriginal.getAddress().getId());
 
-        //What to edit
-        Person personOriginal = em.find(Person.class, personDTO.getId());
-        Address addressOriginal = em.find(Address.class, personOriginal.getAddress().getId());
+            //Ændre persondata/navn til det nye
+            personOriginal.setName(personDTO.getName());
 
-        //Ændre persondata/navn til det nye
-        personOriginal.setName(personDTO.getName());
+            //Sæt "ny" adresse
+            Address newAddress = new Address(personDTO.getStreet(), personDTO.getZip(), personDTO.getCity());
 
-        //Sæt "ny" adresse
-        Address newAddress = new Address(personDTO.getStreet(), personDTO.getZip(), personDTO.getCity());
+            //Test om adresse findes
+            Address addressToTest = doesAddressExist(newAddress);
+            if (addressToTest == null) {
+                //Link person to new address
+                newAddress.addPerson(personOriginal);
 
-        //Test om adresse findes
-        Address addressToTest = doesAddressExist(newAddress);
-        if (addressToTest == null) {
-            //Link person to new address
-            newAddress.addPerson(personOriginal);
+                //If old adress has 1 person attached, thene delete
+                int numberOfPeopleLivingThere = findNumberOfAddresses(addressOriginal);
 
-            //If old adress has 1 person attached, thene delete
-            int numberOfPeopleLivingThere = findNumberOfAddresses(addressOriginal);
-
-            try {
-                em.getTransaction().begin();
                 em.persist(newAddress);
                 em.merge(personOriginal);
 
@@ -225,22 +229,15 @@ public class PersonFacade implements IPersonFacade {
 
                 em.getTransaction().commit();
                 return new PersonDTO(personOriginal);
-            } catch (RuntimeException ex) {
-                throw new WebApplicationException("Internal Server Problem. We are sorry for the inconvenience", 500);
-            } finally {
-                em.close();
-            }
 
-        } else if (addressToTest != null && !addressOriginal.equals(addressToTest)) {
-            //Link person to existing address
-            addressToTest = em.find(Address.class, addressToTest.getId());
-            addressToTest.addPerson(personOriginal);
+            } else if (addressToTest != null && !addressOriginal.equals(addressToTest)) {
+                //Link person to existing address
+                addressToTest = em.find(Address.class, addressToTest.getId());
+                addressToTest.addPerson(personOriginal);
 
-            //If old adress has 1 person attached, thene delete
-            int numberOfPeopleLivingThere = findNumberOfAddresses(addressOriginal);
+                //If old adress has 1 person attached, thene delete
+                int numberOfPeopleLivingThere = findNumberOfAddresses(addressOriginal);
 
-            try {
-                em.getTransaction().begin();
                 em.merge(personOriginal);
                 em.merge(addressToTest);
 
@@ -248,30 +245,24 @@ public class PersonFacade implements IPersonFacade {
                 if (numberOfPeopleLivingThere < 2) {
                     em.remove(addressOriginal);
                 }
-
+                
                 em.getTransaction().commit();
                 return new PersonDTO(personOriginal);
-            } catch (RuntimeException ex) {
-                throw new WebApplicationException("Internal Server Problem. We are sorry for the inconvenience", 500);
-            } finally {
-                em.close();
-            }
-        } else {
-            //Only updatename
-            try {
-                em.getTransaction().begin();
+
+            } else {
+                //Only updatename
                 em.merge(personOriginal);
                 em.getTransaction().commit();
                 return new PersonDTO(personOriginal);
-            } catch (RuntimeException ex) {
-                throw new WebApplicationException("Internal Server Problem. We are sorry for the inconvenience", 500);
-            } finally {
-                em.close();
             }
+        } catch (RuntimeException ex) {
+            throw new WebApplicationException("Internal Server Problem. We are sorry for the inconvenience", 500);
+        } finally {
+            em.close();
         }
     }
 
-    private Address doesAddressExist(Address address) {
+    private synchronized Address doesAddressExist(Address address) {
         EntityManager em = emf.createEntityManager();
         try {
             Query query = em.createQuery("SELECT a FROM Address a WHERE a.street = :street AND a.zip = :zip AND a.city = :city ", Address.class);
@@ -289,7 +280,7 @@ public class PersonFacade implements IPersonFacade {
         }
     }
 
-    private int findNumberOfAddresses(Address address) {
+    private synchronized int findNumberOfAddresses(Address address) {
         EntityManager em = emf.createEntityManager();
         try {
             //Vi søger efter hvor mange der bor på adressen
